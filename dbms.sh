@@ -44,7 +44,7 @@ create_database() {
     if [ -d "$dbname" ]; then
       echo "Database '$dbname' already exists."
     else
-      mkdir "$dbname"
+      mkdir -p "databases/$dbname"
       echo "Database '$dbname' created."
     fi
   else
@@ -52,9 +52,10 @@ create_database() {
   fi
 }
 
+# Function to list the database
 list_databases() {
   echo "Databases:"
-  ls -d */ 2>/dev/null || echo "No databases found."
+  ls -d databases/*/ 2>/dev/null || echo "No databases found."
 }
 
 # Function to connect to a database
