@@ -1,7 +1,5 @@
-!#/bin/bash
-# This Script to present DataBase application based on CLI 
-#First Function is The Main Menu 
-echo " Welcome to DBMS app please select from below mune ^_^ "
+#!/bin/bash
+
 # Function to display the main menu
 display_menu() {
     echo "Main Menu:"
@@ -11,6 +9,20 @@ display_menu() {
     echo "4. Drop Database"
     echo "5. Exit"
     echo -n "Please enter your choice [1-5]: "
+}
+
+# Function to display the database menu
+display_db_menu() {
+    echo "Database Menu:"
+    echo "1. Create Table"
+    echo "2. List Tables"
+    echo "3. Drop Table"
+    echo "4. Insert into Table"
+    echo "5. Select From Table"
+    echo "6. Delete From Table"
+    echo "7. Update Table"
+    echo "8. Exit to Main Menu"
+    echo -n "Please enter your choice [1-8]: "
 }
 
 # Function to create a new database
@@ -41,15 +53,20 @@ connect_database() {
     read dbname
     if [ -d "databases/$dbname" ]; then
         echo "Connected to database '$dbname'."
-        # Placeholder for database interaction code
-        echo "Type 'exit' to disconnect."
         while :; do
-            echo -n "$dbname> "
-            read cmd
-            if [ "$cmd" == "exit" ]; then
-                break
-            fi
-            echo "Command '$cmd' executed in database '$dbname'."
+            display_db_menu
+            read db_choice
+            case $db_choice in
+                1) create_table "$dbname" ;;
+                2) list_tables "$dbname" ;;
+                3) drop_table "$dbname" ;;
+                4) insert_into_table "$dbname" ;;
+                5) select_from_table "$dbname" ;;
+                6) delete_from_table "$dbname" ;;
+                7) update_table "$dbname" ;;
+                8) break ;;
+                *) echo "Invalid choice, please try again." ;;
+            esac
         done
     else
         echo "Database '$dbname' does not exist."
@@ -67,6 +84,104 @@ drop_database() {
         echo "Database '$dbname' does not exist."
     fi
 }
+
+# Function to create a table in the connected database
+create_table() {
+    dbname=$1
+    echo -n "Enter the name of the new table: "
+    read tablename
+    if [ -z "$tablename" ]; then
+        echo "Table name cannot be empty!"
+    else
+        touch "databases/$dbname/$tablename"
+        echo "Table '$tablename' created in database '$dbname'."
+    fi
+}
+
+# Function to list all tables in the connected database
+list_tables() {
+    dbname=$1
+    echo "List of Tables in database '$dbname':"
+    if [ ! "$(ls -A databases/$dbname)" ]; then
+        echo "No tables found."
+    else
+        ls "databases/$dbname"
+    fi
+}
+
+# Function to drop a table in the connected database
+drop_table() {
+    dbname=$1
+    echo -n "Enter the name of the table to drop: "
+    read tablename
+    if [ -f "databases/$dbname/$tablename" ]; then
+        rm "databases/$dbname/$tablename"
+        echo "Table '$tablename' dropped from database '$dbname'."
+    else
+        echo "Table '$tablename' does not exist."
+    fi
+}
+
+# Function to insert data into a table
+insert_into_table() {
+    dbname=$1
+    echo -n "Enter the name of the table to insert into: "
+    read tablename
+    if [ -f "databases/$dbname/$tablename" ]; then
+        echo -n "Enter data to insert: "
+        read data
+        echo "$data" >> "databases/$dbname/$tablename"
+        echo "Data inserted into table '$tablename'."
+    else
+        echo "Table '$tablename' does not exist."
+    fi
+}
+
+# Function to select data from a table
+select_from_table() {
+    dbname=$1
+    echo -n "Enter the name of the table to select from: "
+    read tablename
+    if [ -f "databases/$dbname/$tablename" ]; then
+        echo "Data from table '$tablename':"
+        cat "databases/$dbname/$tablename"
+    else
+        echo "Table '$tablename' does not exist."
+    fi
+}
+
+# Function to delete data from a table
+delete_from_table() {
+    dbname=$1
+    echo -n "Enter the name of the table to delete from: "
+    read tablename
+    if [ -f "databases/$dbname/$tablename" ]; then
+        echo -n "Enter data to delete: "
+        read data
+        sed -i "/$data/d" "databases/$dbname/$tablename"
+        echo "Data deleted from table '$tablename'."
+    else
+        echo "Table '$tablename' does not exist."
+    fi
+}
+
+# Function to update data in a table
+update_table() {
+    dbname=$1
+    echo -n "Enter the name of the table to update: "
+    read tablename
+    if [ -f "databases/$dbname/$tablename" ]; then
+        echo -n "Enter old data to replace: "
+        read old_data
+        echo -n "Enter new data: "
+        read new_data
+        sed -i "s/$old_data/$new_data/g" "databases/$dbname/$tablename"
+        echo "Data in table '$tablename' updated."
+    else
+        echo "Table '$tablename' does not exist."
+    fi
+}
+
 # Main program loop
 while :; do
     display_menu
