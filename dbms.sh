@@ -30,7 +30,7 @@ create_database() {
     echo -n "Enter the name of the new database: "
     read dbname
     local regex='^[a-zA-Z]'
-    # Regex to check for valid database name (must start with a letter and contain only alphanumeric characters and underscores)
+    # Regex to check for valid database name 
     if [[ ! "$dbname" =~ $regex ]]; then
         echo "Invalid database name! The name must start with a letter and can not contain alphanumeric characters and underscores."
     elif [ -z "$dbname" ]; then
