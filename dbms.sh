@@ -27,31 +27,34 @@ display_db_menu() {
 
 # Function to create a new database
 create_database() {
-    echo -n "Enter the name of the new database: "
-    read dbname
-    local regex='^[a-zA-Z]'
-    # Regex to check for valid database name 
-    if [[ ! "$dbname" =~ $regex ]]; then
-        echo "Invalid database name! The name must start with a letter and can not contain alphanumeric characters and underscores."
-    elif [ -z "$dbname" ]; then
+  read -p "Enter database name: " dbname
+  # Check if the database name is empty
+  if [ -z "$dbname" ]; then
         echo "Database name cannot be empty!"
+        return 1
+   fi
+  
+  # Define a regex pattern for valid database names
+  # Must start with a letter only 
+  local regex='^[a-zA-Z]'
+  
+  # Check if the database name matches the regex
+  if [[ $dbname =~ $regex ]]; then
+    # Check if the database directory already exists
+    if [ -d "$dbname" ]; then
+      echo "Database '$dbname' already exists."
     else
-        mkdir -p "databases/$dbname"
-        echo "Database '$dbname' created successfully."
+      mkdir "$dbname"
+      echo "Database '$dbname' created."
     fi
+  else
+    echo "Invalid database name. The name must start with a letter only"
+  fi
 }
 
-
-
-
-# Function to list all databases
 list_databases() {
-    echo "List of Databases:"
-    if [ ! -d "databases" ]; then
-        echo "No databases found."
-    else
-        ls databases
-    fi
+  echo "Databases:"
+  ls -d */ 2>/dev/null || echo "No databases found."
 }
 
 # Function to connect to a database
