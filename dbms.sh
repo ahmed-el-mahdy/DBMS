@@ -31,6 +31,20 @@ create_database() {
   # Check if the database name is empty
   if [ -z "$dbname" ]; then
         echo "Database name cannot be empty!"
+<<<<<<< HEAD
+        return 1
+   fi
+  
+  # Define a regex pattern for valid database names
+  # Must start with a letter only 
+  regex='^[a-zA-Z]'
+  
+  # Check if the database name matches the regex
+  if [[ $dbname =~ $regex ]]; then
+    # Check if the database directory already exists
+    if [ -d "$dbname" ]; then
+      echo "Database '$dbname' already exists."
+=======
         return 1
    fi
   
@@ -43,6 +57,7 @@ create_database() {
     # Check if the database directory already exists
     if [ -d "$dbname" ]; then
       echo "Database '$dbname' already exists."
+>>>>>>> 482dacf7cd063f7704b0df850efba6589ded2e4e
     else
       mkdir -p "databases/$dbname"
       echo "Database '$dbname' created."
@@ -100,12 +115,50 @@ drop_database() {
 create_table() {
     dbname=$1
     echo -n "Enter the name of the new table: "
+
     read tablename
     if [ -z "$tablename" ]; then
         echo "Table name cannot be empty!"
-    else
-        touch "databases/$dbname/$tablename"
-        echo "Table '$tablename' created in database '$dbname'."
+        return 1
+    fi
+# Check if the table name matches the regex 
+    if [[ $tablename =~ $regex ]]; then
+        if [ -f "$tablename" ]; then
+            echo "The table '$tablename' already exists."
+
+        else
+            echo "Enter the columns for the table (format: column_name:data_type). Type 'done' when finished:"
+            columns=()
+            while :; do
+                read column
+                if [ "$column" == "done" ]; then
+                    break
+                fi
+                columns+=("$column")
+            done
+
+            if [ ${#columns[@]} -eq 0 ]; then
+                echo "No columns specified. Table creation aborted."
+                return 1
+            fi
+
+            # Ask for the primary key
+            echo "Enter the primary key column name from the above list:"
+            read primary_key
+
+            if [[ ! " ${columns[@]} " =~ " ${primary_key} " ]]; then
+                echo "Primary key column not found in the column list. Table creation aborted."
+                return 1
+            fi
+
+            # Create the table file with column definitions
+            echo "${columns[*]}" > "$tablename"
+            echo "Primary Key: $primary_key" >> "$tablename"
+            echo "Table '$tablename' created in database '$dbname' with columns: ${columns[*]} and primary key: $primary_key"
+        fi
+    
+    else 
+        echo "Invalid database name. The name must start with a letter only"
     fi
 }
 
