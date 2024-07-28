@@ -142,12 +142,48 @@ function insert_into_table() {
 # Function to select data from a table
 function select_from_table() {
   read -p "Enter table name: " table_name
-  if [ -f "$table_name" ]; then
-    cat "$table_name"
-  else
+  if [ ! -f "$table_name" ]; then
     echo "Table '$table_name' does not exist."
+    return
+  fi
+
+  # Read the header and display the column names
+  header=$(head -1 "$table_name")
+  IFS='|' read -ra columns <<< "$header"
+  echo "Available columns: ${columns[*]}"
+
+  read -p "Do you want to filter the results? (y/n): " filter
+  if [ "$filter" == "y" ]; then
+    read -p "Enter column name to filter by: " col_name
+    read -p "Enter value to filter by: " col_value
+
+    # Get the index of the column to filter by
+    col_index=-1
+    for i in "${!columns[@]}"; do
+      if [ "${columns[$i]}" == "$col_name" ]; then
+        col_index=$i
+        break
+      fi
+    done
+
+    if [ $col_index -eq -1 ]; then
+      echo "Column '$col_name' does not exist."
+      return
+    fi
+
+    echo "Filtering by column '${columns[$col_index]}' (Index: $col_index), looking for value '$col_value'."
+
+    # Display the filtered results
+    awk -v col_index=$((col_index + 1)) -v col_value="$col_value" -F '|' '
+      NR==1 {print; next}  # Always print the header
+      $col_index == col_value {print}' "$table_name"
+  else
+    # Display the entire table
+    cat "$table_name"
   fi
 }
+
+
 
 # Function to delete data from a table
 function delete_from_table() {
