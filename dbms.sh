@@ -31,7 +31,6 @@ create_database() {
   # Check if the database name is empty
   if [ -z "$dbname" ]; then
         echo "Database name cannot be empty!"
-<<<<<<< HEAD
         return 1
    fi
   
@@ -44,20 +43,6 @@ create_database() {
     # Check if the database directory already exists
     if [ -d "$dbname" ]; then
       echo "Database '$dbname' already exists."
-=======
-        return 1
-   fi
-  
-  # Define a regex pattern for valid database names
-  # Must start with a letter only 
-  local regex='^[a-zA-Z]'
-  
-  # Check if the database name matches the regex
-  if [[ $dbname =~ $regex ]]; then
-    # Check if the database directory already exists
-    if [ -d "$dbname" ]; then
-      echo "Database '$dbname' already exists."
->>>>>>> 482dacf7cd063f7704b0df850efba6589ded2e4e
     else
       mkdir -p "databases/$dbname"
       echo "Database '$dbname' created."
