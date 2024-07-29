@@ -191,124 +191,137 @@ drop_table() {
 }
 ################################################################################
 
-# Function to add a column to an existing table  ##checked
-add_column_to_table() {
-    dbname=$1
-    tablename=$2
-    tablefile="databases/$dbname/$tablename"
-
-    # Check if the table file exists
-    if [ ! -f "$tablefile" ]; then
-        echo "Table '$tablename' does not exist in database '$dbname'."
-        return 1
-    fi
-
-echo "Enter the columns for the table (format: column_name:data_type(int,text)). Type 'done' when finished:"
-
-    columns=()
-    while :; do
-        read column
-        if [ "$column" == "done" ]; then
-            break
-        fi
-        # Check if the table name matches the regex 
-        if [[ ! "$column" =~ ^[a-zA-Z][a-zA-Z0-9]*:(int|text)$ ]]; then
-            echo "Invalid column format. Use 'column_name:data_type'."
-            continue
-        fi 
-
-        columns+=("$column")
-    done
-
-    if [ ${#columns[@]} -eq 0 ]; then
-        echo "No columns specified. Table creation aborted."
-        return 1
-    fi
-
-    echo "${columns[*]}" >> "$tablefile"        
-    echo "Columns '${columns[*]}' created in Table '$tablename' in database: '$dbname' successfully."
-}
-
-
 # Function to insert data into a table
 insert_into_table() {
     dbname=$1
-    dbpath="databases/$dbname"
     echo -n "Enter the name of the table to insert into: "
     read tablename
-    tablefile="$dbpath/$tablename"
+    tablefile="databases/$dbname/$tablename"
 
     if [ ! -f "$tablefile" ]; then
-        echo -n "Table '$tablename' does not exist."
+        echo "Table '$tablename' does not exist in database '$dbname'."
         return 1
     fi 
 
-    echo "Do you want to add a new column or insert data as a row? (column/row)"
-    read action
+    # Read the columns from the table file
+    columns=$(head -n 1 "$tablefile")
+    IFS=' ' read -r -a column_array <<< "$columns"
 
-    if [ "$action" == "column" ]; then
-        add_column_to_table "$dbname" "$tablename"
-    elif [ "$action" == "row" ]; then
-        # Read the columns from the table file
-        columns=$(head -n 1 "$tablefile")
-        IFS=' ' read -r -a column_array <<< "$columns"
+    # Prompt for data
+    data=()
+    for col in "${column_array[@]}"; do
+        column_name=${col%%:*}
+        data_type=${col##*:}
 
-        data=()
-        for col in "${column_array[@]}"; do
-            column_name=${col%%:*}
-            data_type=${col##*:}
+        echo -n "Enter data for column '$column_name' ($data_type): "
+        read value
 
-            echo -n "Enter data for column '$column_name' ($data_type): "
-            read value
+        # Validate data type
+        if [[ "$data_type" == "int" && ! "$value" =~ ^-?[0-9]+$ ]]; then
+            echo "Invalid data type for column '$column_name'. Expected integer."
+            return 1
+        elif [[ "$data_type" == "text" && ! "$value" =~ ^[a-zA-Z]+$ ]]; then
+            echo "Invalid data type for column '$column_name'. Expected text."
+            return 1
+        fi
 
-            if [[ "$data_type" == "int" && ! "$value" =~ ^-?[0-9]+$ ]]; then
-                echo "Invalid data type for column '$column_name'. Expected integer."
-                return 1
-            elif [[ "$data_type" == "text" && ! "$value" =~ ^[a-zA-Z]+$ ]]; then
-                echo "Invalid data type for column '$column_name'. Expected text."
-                return 1
-            fi
+        data+=("$value")
+    done
 
-            data+=("$value")
-        done
+    # Create data string with ':' separator
+    data_string=$(IFS=':'; echo "${data[*]}")
 
-        # Insert data into the table
-        echo "${data[*]}" >> "$tablefile"
-        echo "Data inserted into table '$tablename'."
-    else
-        echo "Invalid action. Please choose 'column' or 'row'."
-    fi
-
+    # Insert data into the table
+    echo "$data_string" >> "$tablefile"
+    echo "Data inserted into table '$tablename' in database '$dbname' successfully."
 }
 
+###########################################
+
+# Function to select data from a table
+#The user is prompted to enter the name of the table they want to select data from.
 # Function to select data from a table
 select_from_table() {
     dbname=$1
     echo -n "Enter the name of the table to select from: "
     read tablename
-    if [ -f "databases/$dbname/$tablename" ]; then
-        echo "Data from table '$tablename':"
-        cat "databases/$dbname/$tablename"
-    else
-        echo "Table '$tablename' does not exist."
+    tablefile="databases/$dbname/$tablename"
+
+    if [ ! -f "$tablefile" ]; then
+        echo "Table '$tablename' does not exist in database '$dbname'."
+        return 1
     fi
+
+    # Read the columns from the table file
+    columns=$(head -n 1 "$tablefile")
+    IFS=' ' read -r -a column_array <<< "$columns"
+    
+    # Extract column names for output
+    column_names=$(printf "%s\n" "${column_array[@]}" | sed 's/:.*//')
+    
+    echo "Available columns: ${column_names[*]}"
+
+    # Prompt for column selection
+    echo -n "Enter the columns to select (comma-separated, or * for all columns): "
+    read selected_columns
+
+    if [ "$selected_columns" == "*" ]; then
+        selected_columns=$(printf "%s\n" "${column_names[@]}")
+    fi
+    IFS=',' read -r -a selected_column_array <<< "$selected_columns"
+
+    echo -n "Enter the condition for selection (e.g., column_name=value), or press enter to skip: "
+    read condition
+
+    # Display the selected columns header
+    echo "Selected columns: ${selected_column_array[*]}"
+
+    # Read and display the data
+    while IFS= read -r line; do
+        # Skip the first line (column definitions)
+        if [[ "$line" == "$columns" ]]; then
+            continue
+        fi
+
+        IFS=':' read -r -a data_array <<< "$line"
+
+        # Apply condition if specified
+        if [ -n "$condition" ]; then
+            condition_column=${condition%%=*}
+            condition_value=${condition##*=}
+            condition_column_index=-1
+            for i in "${!column_array[@]}"; do
+                if [[ "${column_array[$i]}" == "$condition_column:"* ]]; then
+                    condition_column_index=$i
+                    break
+                fi
+            done
+            if [ $condition_column_index -eq -1 ] || [ "${data_array[$condition_column_index]}" != "$condition_value" ]; then
+                continue
+            fi
+        fi
+
+        # Output the selected columns
+        output=()
+        for col in "${selected_column_array[@]}"; do
+            for i in "${!column_array[@]}"; do
+                if [[ "${column_array[$i]}" == "$col:"* ]]; then
+                    output+=("${data_array[$i]}")
+                    break
+                fi
+            done
+        done
+
+        # Print only the selected columns
+        echo "${output[*]}"
+    done < "$tablefile"
 }
 
-# Function to delete data from a table  ##checked
-delete_from_table() {
-    dbname=$1
-    echo -n "Enter the name of the table to delete from: "
-    read tablename
-    if [ -f "databases/$dbname/$tablename" ]; then
-        echo -n "Enter data to delete: "
-        read data
-        sed -i "/$data/d" "databases/$dbname/$tablename"
-        echo "Data deleted from table '$tablename'."
-    else
-        echo "Table '$tablename' does not exist."
-    fi
-}
-# Function to update data in a table
+# Usage example
+# select_from_table "my_database"
+
+
+# Function to update data in a table ##checked
 update_table() {
     dbname=$1
     echo -n "Enter the name of the table to update: "
