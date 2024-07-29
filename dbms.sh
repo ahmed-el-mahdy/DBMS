@@ -250,35 +250,42 @@ insert_into_table() {
 
     if [ "$action" == "column" ]; then
         add_column_to_table "$dbname" "$tablename"
+
     elif [ "$action" == "row" ]; then
+    
         # Read the columns from the table file
         columns=$(head -n 1 "$tablefile")
         IFS=' ' read -r -a column_array <<< "$columns"
 
+        echo "Columns: ${column_array[*]}"  # Debug output
+        
         data=()
         for col in "${column_array[@]}"; do
             column_name=${col%%:*}
             data_type=${col##*:}
 
-            echo -n "Enter data for column '$column_name' ($data_type): "
-            read value
-
-            if [[ "$data_type" == "int" && ! "$value" =~ ^-?[0-9]+$ ]]; then
-                echo "Invalid data type for column '$column_name'. Expected integer."
-                return 1
-            elif [[ "$data_type" == "text" && ! "$value" =~ ^[a-zA-Z]+$ ]]; then
-                echo "Invalid data type for column '$column_name'. Expected text."
-                return 1
-            fi
-
-            data+=("$value")
+            while :; do 
+                echo -n "Enter data for column '$column_name' ($data_type): "
+                read value
+                # Validate the input data type
+                if [[ "$data_type" == "int" && ! "$value" =~ ^-?[0-9]+$ ]]; then
+                    echo "Invalid data type for column '$column_name'. Expected integer."
+                elif [[ "$data_type" == "text" && ! "$value" =~ ^[a-zA-Z]+$ ]]; then
+                    echo "Invalid data type for column '$column_name'. Expected text."
+                else 
+                    data+=("$value")
+                    break
+                fi
+            done
         done
 
-        # Insert data into the table
+        # Insert data into the table (appending the row to the table file)
+        echo "Inserting data: ${data[*]}"  # Debug output
         echo "${data[*]}" >> "$tablefile"
         echo "Data inserted into table '$tablename'."
     else
         echo "Invalid action. Please choose 'column' or 'row'."
+        return 1
     fi
 
 }
