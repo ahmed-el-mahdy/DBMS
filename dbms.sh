@@ -36,7 +36,11 @@ create_database() {
   
   # Define a regex pattern for valid database names
   # Must start with a letter only 
+
 regex='^[a-zA-Z]'
+=======
+  regex='^[a-zA-Z]'
+
   
   # Check if the database name matches the regex
   if [[ $dbname =~ $regex ]]; then
@@ -95,6 +99,7 @@ drop_database() {
         echo "Database '$dbname' does not exist."
     fi
 }
+
 
 # Function to create a table in the connected database  ##checked
 create_table() {
@@ -190,6 +195,29 @@ drop_table() {
     else
         echo "Table '$tablename' does not exist."
     fi
+
+# Function to create a table in the connected database
+function create_table() {
+  read -p "Enter table name: " table_name
+  read -p "Enter columns (comma separated): " columns
+  read -p "Enter primary key column: " primary_key
+  echo "$columns|$primary_key" > "$table_name"
+  echo "Table '$table_name' created."
+}
+
+# Function to list all tables in the connected database
+function list_tables() {
+  echo "Tables:"
+  ls
+}
+
+
+# Function to drop a table in the connected database
+function drop_table() {
+  read -p "Enter table name to drop: " table_name
+  rm "$table_name"
+  echo "Table '$table_name' dropped."
+
 }
 ################################################################################
 
@@ -232,7 +260,9 @@ echo "Enter the columns for the table (format: column_name:data_type(int,text)).
 }
 
 
+
 # Function to insert data into a table
+
 insert_into_table() {
     dbname=$1
     dbpath="databases/$dbname"
@@ -285,20 +315,70 @@ insert_into_table() {
         return 1
     fi
 
+
+function insert_into_table() {
+  read -p "Enter table name: " table_name
+  if [ -f "$table_name" ]; then
+    columns=$(head -1 "$table_name" | cut -d'|' -f1)
+    IFS=',' read -ra col_array <<< "$columns"
+    record=""
+    for col in "${col_array[@]}"; do
+      read -p "Enter value for $col: " value
+      record+="$value|"
+    done
+    record="${record%|}"
+    echo "$record" >> "$table_name"
+    echo "Record inserted."
+  else
+    echo "Table '$table_name' does not exist."
+  fi
+
 }
 
 # Function to select data from a table
-select_from_table() {
-    dbname=$1
-    echo -n "Enter the name of the table to select from: "
-    read tablename
-    if [ -f "databases/$dbname/$tablename" ]; then
-        echo "Data from table '$tablename':"
-        cat "databases/$dbname/$tablename"
-    else
-        echo "Table '$tablename' does not exist."
+function select_from_table() {
+  read -p "Enter table name: " table_name
+  if [ ! -f "$table_name" ]; then
+    echo "Table '$table_name' does not exist."
+    return
+  fi
+
+  # Read the header and display the column names
+  header=$(head -1 "$table_name")
+  IFS='|' read -ra columns <<< "$header"
+  echo "Available columns: ${columns[*]}"
+
+  read -p "Do you want to filter the results? (y/n): " filter
+  if [ "$filter" == "y" ]; then
+    read -p "Enter column name to filter by: " col_name
+    read -p "Enter value to filter by: " col_value
+
+    # Get the index of the column to filter by
+    col_index=-1
+    for i in "${!columns[@]}"; do
+      if [ "${columns[$i]}" == "$col_name" ]; then
+        col_index=$i
+        break
+      fi
+    done
+
+    if [ $col_index -eq -1 ]; then
+      echo "Column '$col_name' does not exist."
+      return
     fi
+
+    echo "Filtering by column '${columns[$col_index]}' (Index: $col_index), looking for value '$col_value'."
+
+    # Display the filtered results
+    awk -v col_index=$((col_index + 1)) -v col_value="$col_value" -F '|' '
+      NR==1 {print; next}  # Always print the header
+      $col_index == col_value {print}' "$table_name"
+  else
+    # Display the entire table
+    cat "$table_name"
+  fi
 }
+
 
 # Function to delete data from a table  ##checked
 delete_from_table() {
@@ -310,27 +390,109 @@ delete_from_table() {
         read data
         sed -i "/$data/d" "databases/$dbname/$tablename"
         echo "Data deleted from table '$tablename'."
+
+
+
+# Function to delete data from a table
+function delete_from_table() {
+  read -p "Enter table name: " table_name
+  if [ -f "$table_name" ]; then
+    read -p "Enter primary key value to delete: " pk_value
+
+    # Read the column names and identify the primary key column
+    header=$(head -1 "$table_name")
+    IFS='|' read -ra columns <<< "$header"
+    pk_col_index=-1
+
+    # Assuming the first column is the primary key column
+    pk_col_index=0
+
+    # Temporary file to store the updated table data
+    temp_file=$(mktemp)
+
+    # Use awk to delete the record with the matching primary key value
+    awk -v pk_col_index=$((pk_col_index + 1)) -v pk_value="$pk_value" -F '|' '
+      NR==1 { print; next }
+      $pk_col_index != pk_value { print }
+    ' "$table_name" > "$temp_file"
+
+    # Check if any records were deleted by comparing file sizes
+    original_size=$(wc -c < "$table_name")
+    new_size=$(wc -c < "$temp_file")
+
+    # Move the temporary file back to the original table file if the size differs
+    if [ "$original_size" -ne "$new_size" ]; then
+      mv "$temp_file" "$table_name"
+      echo "Record with primary key value '$pk_value' deleted successfully."
+
     else
-        echo "Table '$tablename' does not exist."
+      rm "$temp_file"
+      echo "Failed to delete the record with primary key value '$pk_value'."
     fi
+  else
+    echo "Table '$table_name' does not exist."
+  fi
 }
 
+
 # Function to update data in a table
-update_table() {
-    dbname=$1
-    echo -n "Enter the name of the table to update: "
-    read tablename
-    if [ -f "databases/$dbname/$tablename" ]; then
-        echo -n "Enter old data to replace: "
-        read old_data
-        echo -n "Enter new data: "
-        read new_data
-        sed -i "s/$old_data/$new_data/g" "databases/$dbname/$tablename"
-        echo "Data in table '$tablename' updated."
-    else
-        echo "Table '$tablename' does not exist."
+function update_table() {
+  read -p "Enter table name: " table_name
+  if [ -f "$table_name" ]; then
+    read -p "Enter primary key value to update: " pk_value
+
+    # Extract the header and primary key column name
+    header=$(head -1 "$table_name")
+    IFS='|' read -ra columns <<< "$header"
+    
+    # Assuming the primary key column is always the first column (change if necessary)
+    pk_col_index=0
+    
+    # Find the record with the primary key value
+    record=$(awk -v pk_index="$((pk_col_index + 1))" -v pk_value="$pk_value" -F '|' '
+      NR==1 {next}  # Skip the header
+      $pk_index == pk_value {print; exit}' "$table_name")
+
+    if [ -z "$record" ]; then
+      echo "No record found with primary key value '$pk_value'."
+      return
     fi
+
+    echo "Current record: $record"
+    IFS='|' read -ra old_values <<< "$record"
+    updated_record=""
+
+    for i in "${!columns[@]}"; do
+      read -p "Enter new value for ${columns[$i]} (current: ${old_values[$i]}): " new_value
+      updated_record+="${new_value:-${old_values[$i]}}|"
+    done
+
+    updated_record="${updated_record%|}"
+
+    # Create a temporary file with the updated data
+    awk -v pk_index="$((pk_col_index + 1))" -v pk_value="$pk_value" -v updated_record="$updated_record" -F '|' '
+      BEGIN {OFS = FS}
+      NR==1 {print; next}
+      $pk_index == pk_value {print updated_record; next}
+      {print}' "$table_name" > tmpfile && mv tmpfile "$table_name"
+
+    # Verify if the record has been updated
+    new_record=$(awk -v pk_index="$((pk_col_index + 1))" -v pk_value="$pk_value" -F '|' '
+      NR==1 {next}
+      $pk_index == pk_value {print; exit}' "$table_name")
+
+    if [ "$record" != "$new_record" ]; then
+      echo "Record updated successfully."
+      echo "Updated record: $new_record"
+    else
+      echo "Record was not updated."
+    fi
+  else
+    echo "Table '$table_name' does not exist."
+  fi
 }
+
+
 
 # Main program loop
 while :; do
