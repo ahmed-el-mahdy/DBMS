@@ -15,7 +15,13 @@ display_menu() {
 display_db_menu() {
     echo "Database Menu:"
     echo "1. Create Table"
-	@@ -25,7 +25,7 @@ display_db_menu() {
+    echo "2. List Tables"
+    echo "3. Drop Table"
+    echo "4. Insert into Table"
+    echo "5. Select From Table"
+    echo "6. Delete From Table"
+    echo "7. Update Table"
+    echo "8. Exit to Main Menu"
     echo -n "Please enter your choice [1-8]: "
 }
 
@@ -34,7 +40,20 @@ regex='^[a-zA-Z]'
 
   # Check if the database name matches the regex
   if [[ $dbname =~ $regex ]]; then
-	@@ -58,7 +58,7 @@ list_databases() {
+    # Check if the database directory already exists
+    if [ -d "$dbname" ]; then
+      echo "Database '$dbname' already exists."
+    else
+      mkdir -p "databases/$dbname"
+      echo "Database '$dbname' created."
+    fi
+  else
+    echo "Invalid database name. The name must start with a letter only"
+  fi
+}
+# Function to list the database
+list_databases() {
+  echo "Databases:"
   ls -d databases/*/ 2>/dev/null || echo "No databases found."
 }
 
@@ -42,7 +61,36 @@ regex='^[a-zA-Z]'
 connect_database() {
     echo -n "Enter the name of the database to connect to: "
     read dbname
-	@@ -96,20 +96,79 @@ drop_database() {
+    if [ -d "databases/$dbname" ]; then
+        echo "Connected to database '$dbname'."
+        while :; do
+            display_db_menu
+            read db_choice
+            case $db_choice in
+                1) create_table "$dbname" ;;
+                2) list_tables "$dbname" ;;
+                3) drop_table "$dbname" ;;
+                4) insert_into_table "$dbname" ;;
+                5) select_from_table "$dbname" ;;
+                6) delete_from_table "$dbname" ;;
+                7) update_table "$dbname" ;;
+                8) break ;;
+                *) echo "Invalid choice, please try again." ;;
+            esac
+        done
+    else
+        echo "Database '$dbname' does not exist."
+    fi
+}
+# Function to drop a database
+drop_database() {
+    echo -n "Enter the name of the database to drop: "
+    read dbname
+    if [ -d "databases/$dbname" ]; then
+        rm -rf "databases/$dbname"
+        echo "Database '$dbname' dropped successfully."
+    else
+        echo "Database '$dbname' does not exist."
     fi
 }
 
