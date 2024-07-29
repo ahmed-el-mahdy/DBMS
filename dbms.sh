@@ -250,15 +250,11 @@ insert_into_table() {
 
     if [ "$action" == "column" ]; then
         add_column_to_table "$dbname" "$tablename"
-
     elif [ "$action" == "row" ]; then
-    
         # Read the columns from the table file
         columns=$(head -n 1 "$tablefile")
         IFS=' ' read -r -a column_array <<< "$columns"
 
-        echo "Columns: ${column_array[*]}"  # Debug output
-        
         data=()
         for col in "${column_array[@]}"; do
             column_name=${col%%:*}
@@ -267,20 +263,21 @@ insert_into_table() {
             while :; do 
                 echo -n "Enter data for column '$column_name' ($data_type): "
                 read value
-                # Validate the input data type
+            # Validate the input data type
                 if [[ "$data_type" == "int" && ! "$value" =~ ^-?[0-9]+$ ]]; then
                     echo "Invalid data type for column '$column_name'. Expected integer."
+                return 1
                 elif [[ "$data_type" == "text" && ! "$value" =~ ^[a-zA-Z]+$ ]]; then
                     echo "Invalid data type for column '$column_name'. Expected text."
                 else 
-                    data+=("$value")
-                    break
+                break
                 fi
             done
+
+            data+=("$value")
         done
 
-        # Insert data into the table (appending the row to the table file)
-        echo "Inserting data: ${data[*]}"  # Debug output
+        # Insert data into the table
         echo "${data[*]}" >> "$tablefile"
         echo "Data inserted into table '$tablename'."
     else
