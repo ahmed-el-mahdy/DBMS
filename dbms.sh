@@ -52,13 +52,13 @@ regex='^[a-zA-Z]'
   fi
 }
 
-# Function to list the database
+# Function to list the database     ##checked
 list_databases() {
   echo "Databases:"
   ls -d databases/*/ 2>/dev/null || echo "No databases found."
 }
 
-# Function to connect to a database  ##check
+# Function to connect to a database  ##checked
 connect_database() {
     echo -n "Enter the name of the database to connect to: "
     read dbname
@@ -84,7 +84,7 @@ connect_database() {
     fi
 }
 
-# Function to drop a database
+# Function to drop a database   ##checked
 drop_database() {
     echo -n "Enter the name of the database to drop: "
     read dbname
