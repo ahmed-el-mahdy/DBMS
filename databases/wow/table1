@@ -1,0 +1,5 @@
+cardid:int
+Primary Key: cardid
+jobtitle:text
+job:text phone:int
+101
