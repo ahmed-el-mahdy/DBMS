@@ -24,3 +24,5 @@ Connect To the Database menu
 8. Exit to Main Menu"
 "Please enter your choice [1-8]: "
 
+
+enjoy trying this app for free.
