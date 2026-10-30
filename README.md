@@ -1,5 +1,24 @@
 # 🌟 **Bash Database Management System (DBMS)** 🌟
 
+## Source-Verified Flow
+
+Reviewed 30 October 2026 against `dbms.sh`. This is a local shell-learning project, not a transactional database service.
+
+```mermaid
+flowchart LR
+   User["Terminal user"] --> Main["Database menu"]
+   Main --> Database["Create, list, connect or drop database"]
+   Database --> Tables["Table menu"]
+   Tables --> Schema["Define columns and data types"]
+   Tables --> Records["Insert, select, update or delete records"]
+   Schema --> Files["Local filesystem storage"]
+   Records --> Files
+```
+
+Run `bash -n dbms.sh` for syntax checking first, then test in a disposable working directory with sample data. Drop/delete operations mutate local files; never test against valuable data. A smoke matrix should cover invalid names/types, duplicate values, missing tables, interrupted writes and input containing delimiters.
+
+No transaction, concurrency, backup/restore or production security guarantee is established by this example. [Career reference](https://github.com/ahmed-el-mahdy/Career-Advance#personal-repository-reference-map): shell programming, input validation and filesystem-oriented CRUD, separate from employer database operations.
+
 ![Bash Icon](https://img.icons8.com/color/48/000000/bash.png) ![Database Icon](https://img.icons8.com/color/48/000000/database.png) ![Linux Icon](https://img.icons8.com/color/48/000000/linux.png) ![Terminal Icon](https://img.icons8.com/color/48/000000/console.png) 
 
 Welcome to the **Bash Database Management System**! 
@@ -89,14 +108,17 @@ This project is licensed under the **MIT License**. See the LICENSE file for mor
    ```bash
    git clone https://github.com/ahmed-el-mahdy/DBMS.git
    cd DBMS
+   ```
    
 2. Make the script executable:
    ```bash
    chmod +x dbms.sh
+   ```
 
 3. Usage:
   To launch the DBMS, run:
    ```bash
    ./dbms.sh
+   ```
 
 
